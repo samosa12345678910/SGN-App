@@ -1,0 +1,12 @@
+{
+  "name": "SGNApp",
+  "app_id": "",
+  "v2": true,
+  "typescript": true,
+  "proxies": [
+    {
+        "path": "/microsoft",
+        "proxyUrl": "https://login.microsoftonline.com/stedelijkgymnijmegen.nl"
+    }
+]
+}
