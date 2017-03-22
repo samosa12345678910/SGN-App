@@ -15,26 +15,32 @@ export class Auth {
   constructor(private http: Http, private nativeStorage: NativeStorage) {
   }
 
+  /**
+   * Login functions
+   * Gebruik altijd login() en niet forceLogin.
+   */
   public login(): Promise<any> {
       return new Promise((resolve, reject) => {
-          this.getCredentials().then(() => {
-              resolve();
+          this.getCredentials().then(res => {
+              resolve(res);
           }, error => {
-              this.forceLogin(resolve, reject);
+              this.forceLogin().then(res => resolve(res), err => reject(err));
           });
       });
   }
 
-  private forceLogin(resolve: any, reject: any) {
-      const clientId = "b8ef7e9a-071f-4f5f-b826-4d6d160fbe97";
-      const authContextUrl = "https://login.microsoftonline.com/stedelijkgymnijmegen.nl";
-      const resourceUrl = "https://graph.windows.net";
+  private forceLogin(): Promise<any> {
+      return new Promise((resolve, reject) => {
+          const clientId = "b8ef7e9a-071f-4f5f-b826-4d6d160fbe97";
+          const authContextUrl = "https://login.microsoftonline.com/stedelijkgymnijmegen.nl";
+          const resourceUrl = "https://graph.windows.net";
 
-      if (window.cordova !== undefined) {
-          this.loginNativeFlow(clientId, authContextUrl, resourceUrl, resolve, reject);
-      } else {
-          alert("Whoops, we hebben nog geen browsersupport.");
-      }
+          if (window.cordova !== undefined) {
+              this.loginNativeFlow(clientId, authContextUrl, resourceUrl, resolve, reject);
+          } else {
+              alert("Whoops, we hebben nog geen browsersupport.");
+          }
+      });
   }
 
   private loginNativeFlow(clientId: string, authContextUrl: string, resourceUrl: string, resolve: any, reject: any) {
@@ -96,7 +102,7 @@ export class Auth {
                       .subscribe(res => {
                           this.setCredentials(res).then(
                               data => {
-                                  resolve();
+                                  resolve(res);
                               }, error => {
                                   reject("Failed saving the credentials.");
                               }
@@ -116,6 +122,10 @@ export class Auth {
       });
   }
 
+  /**
+   * Credentials functions
+   */
+
   public setCredentials(res: any): Promise<any> {
       return new Promise((resolve, reject) => {
           this.nativeStorage.setItem('sgnCredentials', res)
@@ -128,6 +138,8 @@ export class Auth {
       });
   }
 
+
+  // Je kunt beter login() gebruiken ipv deze functie. Als je login() gebruikt heb je ook meteen de login fallback. Let wel op dat de credentials verlopen kunnen zijn.
   public getCredentials(): Promise<any> {
       return new Promise((resolve, reject) => {
           this.nativeStorage.getItem('sgnCredentials')
@@ -153,6 +165,46 @@ export class Auth {
           }, error => {
               reject(error);
           });
+      });
+  }
+
+  /**
+   * Refresh functions
+   */
+
+  public refreshToken(): Promise<any> {
+      return new Promise((resolve, reject) => {
+         this.getCredentials().then(creds => {
+             let data = {
+               id_type: 'refresh_token',
+               refresh_token: creds.refresh_token
+             };
+
+             var headers = new Headers();
+             headers.append('Content-Type', 'application/x-www-form-urlencoded');
+
+             this.http.post('https://test.sgndata.nl/backend/auth/authorize', queryString.stringify(data), {headers: headers}).map(res => res.json())
+             .subscribe(res => {
+                 this.setCredentials(res).then(
+                     data => {
+                         resolve(res);
+                     }, error => {
+                         console.log("Failed saving the credentials");
+                         reject();
+                     }
+                 )
+             }, err => {
+                 this.forceLogin().then(success => {
+                     resolve(success);
+                 }, err => {
+                     console.log("Auth error", err);
+                     reject();
+                 });
+             });
+         }, err => {
+            console.log("Er zijn geen credentials gevonden, maar je roept toch deze functie aan?");
+            reject();
+         });
       });
   }
 }

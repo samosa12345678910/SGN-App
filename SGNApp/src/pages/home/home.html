@@ -7,7 +7,17 @@
 </ion-header>
 
 <ion-content padding>
-  <button (click)="login()">Login click</button>
-  <button (click)="get()">Get stored credentials</button>
-  <button (click)="logout()">Logout</button>
+    <p>Deze buttons zijn tijdelijk voor het testen van de Auth provider</p>
+      <button (click)="login()">Login click</button>
+      <button (click)="getCreds()">Get stored credentials</button>
+      <button (click)="logout()">Logout</button><br/><br/>
+
+    <p>Je kunt hieronder klikken om de API provider te testen</p>
+    <button (click)="getTest()">Test API</button>
+    <br/><br/>
+    <div *ngIf="response">
+        <p>Dit is het antwoord op je API call (kijk ook in de console voor het volledige antwoord):</p>
+        <h2>Welkom {{ response.voornaam }} {{ response.achternaam }}</h2>
+        <img [src]="response.foto" alt="foto"/>
+    </div>
 </ion-content>

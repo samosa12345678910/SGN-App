@@ -4,6 +4,7 @@ import { MyApp } from './app.component';
 import { HomePage } from '../pages/home/home';
 
 import { Auth } from '../providers/auth';
+import { Api } from '../providers/api';
 
 import { StatusBar } from '@ionic-native/status-bar';
 import { SplashScreen } from '@ionic-native/splash-screen';
@@ -24,6 +25,7 @@ import { NativeStorage } from '@ionic-native/native-storage';
   ],
   providers: [{provide: ErrorHandler, useClass: IonicErrorHandler},
       Auth,
+      Api,
       StatusBar,
       SplashScreen,
       NativeStorage

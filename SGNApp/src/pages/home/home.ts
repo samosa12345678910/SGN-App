@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { NavController, Platform } from 'ionic-angular';
 import { Auth } from '../../providers/auth';
+import { Api } from '../../providers/api';
 
 @Component({
   selector: 'page-home',
@@ -8,13 +9,18 @@ import { Auth } from '../../providers/auth';
 })
 export class HomePage {
 
-  constructor(public navCtrl: NavController, private platform : Platform, public auth : Auth) {
+    public response;
 
+  constructor(public navCtrl: NavController, private platform : Platform, public auth : Auth, public api: Api) {
   }
+
+  /**
+   * TIJDELIJKE CODE VOOR DEMONSTRATIE. DEZE PAGINA WORDT UITEINDELIJK VERWIJDERD EN DIENT TE WORDEN VERVANGEN DOOR EEN ROOSTERPAGINA.
+   */
 
   public login() {
       this.platform.ready().then(() => {
-        this.auth.login().then(success => {
+        this.auth.login().then(() => {
             alert("Logged in");
         }, (error) => {
             alert(error);
@@ -22,7 +28,7 @@ export class HomePage {
     });
   }
 
-  public get() {
+  public getCreds() {
       this.auth.getCredentials().then(success => {
           console.log(success);
       }, error => {
@@ -35,6 +41,15 @@ export class HomePage {
           alert("Logged out!");
       }, error => {
           alert("No user found");
+      });
+  }
+
+  public getTest() {
+      this.api.get('leerlingen/113004').then(success => {
+          console.log(success);
+          this.response = success;
+      }, error => {
+          console.log(error);
       });
   }
 }
