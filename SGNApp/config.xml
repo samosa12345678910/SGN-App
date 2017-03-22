@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <widget id="com.verictas.sgn" version="0.2.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
   <name>Stedelijk Gymnasium Nijmegen</name>
-  <description></description>
+  <description/>
   <author email="contact@verictas.nl" href="https://verictas.nl">Verictas</author>
   <content src="index.html"/>
   <access origin="*"/>

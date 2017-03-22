@@ -2,7 +2,12 @@ import { NgModule, ErrorHandler } from '@angular/core';
 import { IonicApp, IonicModule, IonicErrorHandler } from 'ionic-angular';
 import { MyApp } from './app.component';
 import { HomePage } from '../pages/home/home';
-import { Auth } from '../providers/auth'
+
+import { Auth } from '../providers/auth';
+
+import { StatusBar } from '@ionic-native/status-bar';
+import { SplashScreen } from '@ionic-native/splash-screen';
+import { NativeStorage } from '@ionic-native/native-storage';
 
 @NgModule({
   declarations: [
@@ -17,6 +22,11 @@ import { Auth } from '../providers/auth'
     MyApp,
     HomePage
   ],
-  providers: [{provide: ErrorHandler, useClass: IonicErrorHandler}, Auth]
+  providers: [{provide: ErrorHandler, useClass: IonicErrorHandler},
+      Auth,
+      StatusBar,
+      SplashScreen,
+      NativeStorage
+  ]
 })
 export class AppModule {}

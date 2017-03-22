@@ -15,11 +15,26 @@ export class HomePage {
   public login() {
       this.platform.ready().then(() => {
         this.auth.login().then(success => {
-            alert(success);
+            alert("Logged in");
         }, (error) => {
             alert(error);
         });
     });
   }
 
+  public get() {
+      this.auth.getCredentials().then(success => {
+          console.log(success);
+      }, error => {
+          alert("No user found");
+      });
+  }
+
+  public logout() {
+      this.auth.logout().then(success => {
+          alert("Logged out!");
+      }, error => {
+          alert("No user found");
+      });
+  }
 }
