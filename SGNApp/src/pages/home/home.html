@@ -8,12 +8,12 @@
 
 <ion-content padding>
     <p>Deze buttons zijn tijdelijk voor het testen van de Auth provider</p>
-      <button (click)="login()">Login click</button>
-      <button (click)="getCreds()">Get stored credentials</button>
-      <button (click)="logout()">Logout</button><br/><br/>
+      <button ion-button (click)="login()">Login click</button>
+      <button ion-button (click)="getCreds()">Get stored credentials</button>
+      <button ion-button (click)="logout()">Logout</button><br/><br/>
 
     <p>Je kunt hieronder klikken om de API provider te testen</p>
-    <button (click)="getTest()">Test API</button>
+    <button ion-button (click)="getTest()">Test API</button>
     <br/><br/>
     <div *ngIf="response">
         <p>Dit is het antwoord op je API call (kijk ook in de console voor het volledige antwoord):</p>

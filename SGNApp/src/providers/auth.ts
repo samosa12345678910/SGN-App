@@ -81,15 +81,12 @@ export class Auth {
 
                         Stuur een request naar het token endpoint bij microsoft om de code op te halen, en stuur deze daarna door naar de SGN API server.
                         Dit wordt vervangen door een OAuth flow op de SGN API server.
-
-                        TODO:: Je kunt nu nog een error krijgen voor de server microsoft/ omdat deze via een proxy gaat, vanwege CORS issues. Dit wordt later vervangen door
-                        https://test.sgndata.nl/backend/oauth2/token die wel de goede CORS headers heeft.
                    */
 
                   var headers = new Headers();
                   headers.append('Content-Type', 'application/x-www-form-urlencoded');
 
-                  this.http.post('microsoft/oauth2/token', queryString.stringify(data), {headers: headers}).map(res => res.json())
+                  this.http.post('https://login.microsoftonline.com/stedelijkgymnijmegen.nl/oauth2/token', queryString.stringify(data), {headers: headers}).map(res => res.json())
                   .subscribe(res => {
                       const token = res.id_token;
 
@@ -112,9 +109,37 @@ export class Auth {
                           reject('Failed getting details from test.sgndata.nl');
                       });
                   }, err => {
-                      console.log(err);
-                      reject('Failed getting details from Microsoft');
+                      // TEMP:: Fix CORS issue
+                      console.warn("Er was nu normaal een CORS issue opgetreden, maar de onderstaande code gaat dat tijdelijk tegen met een lokale proxy.");
+
+                      this.http.post('microsoft/oauth2/token', queryString.stringify(data), {headers: headers}).map(res => res.json())
+                      .subscribe(res => {
+                          const token = res.id_token;
+
+                          let data = {
+                            id_type: 'azure_ad',
+                            id_token: token
+                          };
+
+                          this.http.post('https://test.sgndata.nl/backend/auth/authorize', queryString.stringify(data), {headers: headers}).map(res => res.json())
+                          .subscribe(res => {
+                              this.setCredentials(res).then(
+                                  data => {
+                                      resolve(res);
+                                  }, error => {
+                                      reject("Failed saving the credentials.");
+                                  }
+                              )
+                          }, err => {
+                              console.log(err);
+                              reject('Failed getting details from test.sgndata.nl');
+                          });
+                      });
                   });
+
+                  /**
+                   * EINDE TIJDELIJKE BLOK
+                   */
               } else {
                   reject('Het inloggen is mislukt.');
               }
