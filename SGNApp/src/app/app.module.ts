@@ -9,6 +9,9 @@ import { Api } from '../providers/api';
 import { StatusBar } from '@ionic-native/status-bar';
 import { SplashScreen } from '@ionic-native/splash-screen';
 import { NativeStorage } from '@ionic-native/native-storage';
+import { BrowserTab } from '@ionic-native/browser-tab';
+import { InAppBrowser } from '@ionic-native/in-app-browser';
+import { Deeplinks } from '@ionic-native/deeplinks';
 
 @NgModule({
   declarations: [
@@ -28,7 +31,10 @@ import { NativeStorage } from '@ionic-native/native-storage';
       Api,
       StatusBar,
       SplashScreen,
-      NativeStorage
+      NativeStorage,
+      BrowserTab,
+      InAppBrowser,
+      Deeplinks
   ]
 })
 export class AppModule {}

@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Http, Headers } from '@angular/http';
 import { NativeStorage } from '@ionic-native/native-storage';
+import { BrowserTab } from '@ionic-native/browser-tab';
+import { InAppBrowser } from '@ionic-native/in-app-browser';
 
 import 'rxjs/add/operator/map';
 
-import URL from 'url-parse';
 import queryString from 'query-string';
 
 declare var window: any;
@@ -12,7 +13,11 @@ declare var window: any;
 @Injectable()
 export class Auth {
 
-  constructor(private http: Http, private nativeStorage: NativeStorage) {
+  private loginResolve: any;
+  private loginReject: any;
+  private loginData: any;
+
+  constructor(private http: Http, private nativeStorage: NativeStorage, private browserTab: BrowserTab, private browser: InAppBrowser) {
   }
 
   /**
@@ -46,105 +51,131 @@ export class Auth {
   private loginNativeFlow(clientId: string, authContextUrl: string, resourceUrl: string, resolve: any, reject: any) {
       const state = Math.random().toString(36).substr(2, 10);
       const nonce = Math.random().toString(36).substr(2, 10);
+      const redirectUrl = "sgn://callback";
 
-      var browserRef = window.cordova.InAppBrowser.open(authContextUrl + "/oauth2/authorize?client_id=" + clientId + "&redirect_uri=http://SGNApp&response_type=code&scope=openid,email,profile&resource=" + resourceUrl + "&state=" + state + "&nonce=" + nonce, "_blank", "location=no,clearsessioncache=yes,clearcache=yes,zoom=no");
-      browserRef.addEventListener("loadstart", (event) => {
-          if ((event.url).indexOf("http://sgnapp") === 0) {
-              browserRef.removeEventListener("exit", (event) => {});
-              browserRef.close();
+      this.loginResolve = resolve;
+      this.loginReject = reject;
+      this.loginData = {
+          state,
+          nonce,
+          clientId,
+          authContextUrl,
+          resourceUrl,
+          redirectUrl
+      };
 
-              const url = new URL(event.url);
-              const query = queryString.parse(url.query);
+      const url = authContextUrl + "/oauth2/authorize?client_id=" + clientId + "&redirect_uri=" + redirectUrl + "&response_type=code&scope=openid,email,profile&resource=" + resourceUrl + "&state=" + state + "&nonce=" + nonce;
+
+      this.browserTab.isAvailable()
+        .then((isAvailable: boolean) => {
+            if (isAvailable) {
+                this.browserTab.openUrl(url);
+            } else {
+                this.browser.create(url, '_system', {});
+            }
+        });
+  }
+
+  private sendLoginResponse(success: boolean, message: string) {
+      if (success) {
+          this.loginResolve(message);
+      } else {
+          this.loginReject(message);
+      }
 
 
-              // Check of de respnose een error attr bevat
-              if (query.error !== undefined) {
-                  reject("Het inloggen is mislukt: " + query.error);
-              }
+      // Cleanup
+      this.loginResolve = null;
+      this.loginReject = null;
+      this.loginData = null;
+  }
 
-              // Check of de state oke is en of er een code is geretourneerd.
-              if (query.state !== state) {
-                  reject('Authentication error. State incorrect.');
-              } else if (query.code !== undefined) {
-                  // State correct!
-                  const code = query.code;
-                  let data = {
-                          client_id: clientId,
-                          grant_type: 'authorization_code',
-                          code: code,
-                          redirect_uri: 'http://SGNApp',
-                          resource: resourceUrl
-                  };
+  public handleCallback(routeMatch: any) {
+      const query = queryString.parse(routeMatch.$link.queryString);
 
-                  /**
-                   * TIJDELIJK:
+      // Check of de respnose een error attr bevat
+      if (query.error !== undefined) {
+        this.sendLoginResponse(false, "Het inloggen is mislukt: " + query.error);
+      }
 
-                        Stuur een request naar het token endpoint bij microsoft om de code op te halen, en stuur deze daarna door naar de SGN API server.
-                        Dit wordt vervangen door een OAuth flow op de SGN API server.
-                   */
+      // Check of de state oke is en of er een code is geretourneerd.
+      if (query.state !== this.loginData.state) {
+        this.sendLoginResponse(false, 'Authentication error. State incorrect.');
+      } else if (query.code !== undefined) {
+        // State correct!
+        const code = query.code;
+        let data = {
+            client_id: this.loginData.clientId,
+            grant_type: 'authorization_code',
+            code: code,
+            redirect_uri: this.loginData.redirectUrl,
+            resource: this.loginData.resourceUrl
+        };
 
-                  var headers = new Headers();
-                  headers.append('Content-Type', 'application/x-www-form-urlencoded');
+        /**
+        * TIJDELIJK:
+            Stuur een request naar het token endpoint bij microsoft om de code op te halen, en stuur deze daarna door naar de SGN API server.
+            Dit wordt vervangen door een OAuth flow op de SGN API server.
+        */
 
-                  this.http.post('https://login.microsoftonline.com/stedelijkgymnijmegen.nl/oauth2/token', queryString.stringify(data), {headers: headers}).map(res => res.json())
-                  .subscribe(res => {
-                      const token = res.id_token;
+        var headers = new Headers();
+        headers.append('Content-Type', 'application/x-www-form-urlencoded');
 
-                      let data = {
-                        id_type: 'azure_ad',
-                        id_token: token
-                      };
+        this.http.post('https://login.microsoftonline.com/stedelijkgymnijmegen.nl/oauth2/token', queryString.stringify(data), {headers: headers}).map(res => res.json())
+            .subscribe(res => {
+                const token = res.id_token;
+                let data = {
+                    id_type: 'azure_ad',
+                    id_token: token
+                };
 
-                      this.http.post('https://test.sgndata.nl/backend/auth/authorize', queryString.stringify(data), {headers: headers}).map(res => res.json())
-                      .subscribe(res => {
-                          this.setCredentials(res).then(
-                              data => {
-                                  resolve(res);
-                              }, error => {
-                                  reject("Failed saving the credentials.");
-                              }
-                          )
-                      }, err => {
-                          console.log(err);
-                          reject('Failed getting details from test.sgndata.nl');
-                      });
-                  }, err => {
-                      // TEMP:: Fix CORS issue
-                      console.warn("Er was nu normaal een CORS issue opgetreden, maar de onderstaande code gaat dat tijdelijk tegen met een lokale proxy.");
+                this.http.post('https://test.sgndata.nl/backend/auth/authorize', queryString.stringify(data), {headers: headers}).map(res => res.json())
+                    .subscribe(res => {
+                        this.setCredentials(res).then(
+                            data => {
+                                this.sendLoginResponse(true, res);
+                            }, error => {
+                                this.sendLoginResponse(false, "Failed saving the credentials.");
+                            }
+                        )
+                    }, err => {
+                        console.log(err);
+                        this.sendLoginResponse(false, 'Failed getting details from test.sgndata.nl');
+                    });
+                }, err => {
+                    // TEMP:: Fix CORS issue
+                    console.warn("Er was nu normaal een CORS issue opgetreden, maar de onderstaande code gaat dat tijdelijk tegen met een lokale proxy.");
 
-                      this.http.post('microsoft/oauth2/token', queryString.stringify(data), {headers: headers}).map(res => res.json())
-                      .subscribe(res => {
-                          const token = res.id_token;
-
-                          let data = {
+                    this.http.post('microsoft/oauth2/token', queryString.stringify(data), {headers: headers}).map(res => res.json())
+                    .subscribe(res => {
+                        const token = res.id_token;
+                        let data = {
                             id_type: 'azure_ad',
                             id_token: token
-                          };
+                        };
 
-                          this.http.post('https://test.sgndata.nl/backend/auth/authorize', queryString.stringify(data), {headers: headers}).map(res => res.json())
-                          .subscribe(res => {
-                              this.setCredentials(res).then(
-                                  data => {
-                                      resolve(res);
-                                  }, error => {
-                                      reject("Failed saving the credentials.");
-                                  }
-                              )
-                          }, err => {
-                              console.log(err);
-                              reject('Failed getting details from test.sgndata.nl');
-                          });
-                      });
-                  });
+                        this.http.post('https://test.sgndata.nl/backend/auth/authorize', queryString.stringify(data), {headers: headers}).map(res => res.json())
+                        .subscribe(res => {
+                            this.setCredentials(res).then(
+                                data => {
+                                    this.sendLoginResponse(true, res);
+                                }, error => {
+                                    this.sendLoginResponse(false, "Failed saving the credentials.");
+                                }
+                            );
+                        }, err => {
+                            console.log(err);
+                            this.sendLoginResponse(false, 'Failed getting details from test.sgndata.nl');
+                        });
+                    });
+                });
 
-                  /**
-                   * EINDE TIJDELIJKE BLOK
-                   */
-              } else {
-                  reject('Het inloggen is mislukt.');
-              }
-          }
-      });
+            /**
+            * EINDE TIJDELIJKE BLOK
+            */
+      } else {
+          this.sendLoginResponse(false, 'Het inloggen is mislukt.');
+      }
   }
 
   /**
