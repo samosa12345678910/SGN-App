@@ -64,6 +64,14 @@ export class Auth {
           redirectUrl
       };
 
+      // Automatic timeout after 60 seconds.
+      setTimeout(() => {
+          if (this.loginReject !== null) {
+            console.warn("The response took too long and a timeout response was sent.");
+            this.sendLoginResponse(false, "Timeout.");
+          }
+      }, 60000);
+
       const url = authContextUrl + "/oauth2/authorize?client_id=" + clientId + "&redirect_uri=" + redirectUrl + "&response_type=code&scope=openid,email,profile&resource=" + resourceUrl + "&state=" + state + "&nonce=" + nonce;
 
       this.browserTab.isAvailable()
@@ -77,20 +85,27 @@ export class Auth {
   }
 
   private sendLoginResponse(success: boolean, message: string) {
-      if (success) {
-          this.loginResolve(message);
-      } else {
-          this.loginReject(message);
+      if (this.loginResolve !== null) {
+          if (success) {
+              this.loginResolve(message);
+          } else {
+              this.loginReject(message);
+          }
+
+
+          // Cleanup
+          this.loginResolve = null;
+          this.loginReject = null;
+          this.loginData = null;
       }
-
-
-      // Cleanup
-      this.loginResolve = null;
-      this.loginReject = null;
-      this.loginData = null;
   }
 
   public handleCallback(routeMatch: any) {
+      if (this.loginData === null || this.loginData === undefined) {
+          console.warn("Incorrect auth callback. There was no login promise to answer to.");
+          return;
+      }
+
       const query = queryString.parse(routeMatch.$link.queryString);
 
       // Check of de respnose een error attr bevat
