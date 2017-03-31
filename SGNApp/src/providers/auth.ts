@@ -106,6 +106,8 @@ export class Auth {
           return;
       }
 
+      console.log('Processing login data', routeMatch);
+
       const query = queryString.parse(routeMatch.$link.queryString);
 
       // Check of de respnose een error attr bevat

@@ -30,7 +30,13 @@ export class MyApp {
          } else {
              console.warn("Match ignored.", match);
          }
-     }, (nomatch) => console.warn("Path not found while using deeplinks."));
+     }, (nomatch) => {
+         if (nomatch.$link.host === "callback") {
+             this.auth.handleCallback(nomatch);
+         } else {
+             console.warn("Path not found while using deeplinks.", nomatch)
+         }
+     });
     });
   }
 }
